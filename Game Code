@@ -1,0 +1,230 @@
+import modules
+import random
+import pygame
+from pygame.locals import *
+import pygame
+
+#STARTS THE PYGAME APPLICATION
+pygame.init()
+running = True
+
+#pygame window and colours
+width = 600
+height = 600
+gray = (120,120,120)
+white = (255,255,255)
+black = (0,0,0)
+green = (53, 179, 12)
+blue = (0, 0, 255)
+
+
+
+#variables - grids
+rows = 6
+coloumns = 8
+correct = [[0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0]] # checking number
+new_board = True
+options_list = []
+spaces = []
+used = []
+first_guess = False
+second_guess = False
+first_guess_num = 0
+second_guess_num = 0
+score = 0
+best_score = 0
+matches = 0
+game_over = False
+
+#frame rate
+fps = 60
+
+#speed the game runs at
+timer = pygame.time.Clock()
+
+#window for game
+window = pygame.display.set_mode([width, height])
+
+#backgrounds and game name
+pygame.display.set_caption("--MEMORY GAME--")
+window.fill(white)
+
+#fonts
+title_font = pygame.font.Font('freesansbold.ttf', 56)
+small_font = pygame.font.Font('freesansbold.ttf', 26)
+
+
+def generate_board(): #restarts game
+    global options_list
+    global spaces
+    for item in range(rows * coloumns // 2):
+        options_list.append(item)
+
+    for item in range(rows * coloumns): #grabs option for optionlist 0-23
+        piece = options_list[random.randint(0, len(options_list) - 1)]
+        spaces.append(piece)
+        if piece in used:
+            used.remove(piece)
+            options_list.remove(piece)
+        else:
+            used.append(piece)
+
+
+
+def draw_backgrounds(): #drawing the board areas
+    top_menu = pygame.draw.rect(window,black, [0, 0, width, 100])
+    title_text = title_font.render('Matching Game!', True, white) #renders the fonts and titles what it says
+    window.blit(title_text, (80, 40)) #draws text
+    board_area = pygame.draw.rect(window, gray, [0, 100, width, height-200])
+    bottom_menu = pygame.draw.rect(window, black, [0, height-100, width, 100])
+    restart_button = pygame.draw.rect(window, gray, [10, height-90, 200, 80], 0, 5)
+    restart_text = title_font.render('Restart', True, white)  # renders the fonts and titles what it says
+    window.blit(restart_text, (10, 520))  # draws restart button
+
+    score_text = small_font.render(f'Current Turn: {score}', True, white)  # renders the fonts and titles what it says
+    window.blit(score_text, (350, 520))  # draws score button
+
+    best_text = small_font.render(f'Previous Best: {best_score}', True, white)  # renders the fonts and titles what it says
+    window.blit(best_text, (350, 560))  # draws best score button
+
+    return restart_button
+
+
+
+def draw_board(): #draws the board/creates
+    global rows
+    global coloumns
+    global correct
+
+    board_list = []
+    for i in range(coloumns): #runs 1-8
+        for j in range(rows): #runs 1-6
+            piece = pygame.draw.rect(window, white, [i * 75 + 12, j * 65 + 112, 50, 50], 0, 4) #draws board spots
+            board_list.append(piece)
+            """piece_text = small_font.render(f'{spaces[i * rows + j]}', True, gray)
+            window.blit(piece_text, (i * 75 + 18, j * 65 + 120))""" #blurs out the numbers
+
+    for r in range(rows):
+        for c in range(coloumns):
+            if correct[r][c] == 1:
+                pygame.draw.rect(window, green, [c * 75 + 10, r * 65 + 110, 54, 54], 3, 4)
+                piece_text = small_font.render(f'{spaces[c * rows + r]}', True, black)
+                window.blit(piece_text, (c * 75 + 18, r * 65 + 120))
+
+    return board_list
+
+def check_guesses(first, second): #defining checking numbers
+    global spaces
+    global correct
+    global score
+    global matches
+
+    if spaces[first] == spaces[second]:
+        coloumn1 = first // rows
+        coloumn2 = second // rows
+        row1 = first - (first // rows * rows)
+        row2 = second - (second // rows * rows)
+
+        if correct[row1][coloumn1] == 0 and correct[row2][coloumn2] == 0:
+            correct[row1][coloumn1] = 1
+            correct[row2][coloumn2] = 1
+            score += 1 #keeps track of the scores
+            matches += 1
+
+    else:
+        score += 1
+
+
+#button for quit game
+while running:
+
+    #frames
+    timer.tick(fps)
+
+    if new_board:
+        generate_board()
+        new_board = False
+
+
+    #menu bars and other score
+    restart = draw_backgrounds()
+    board = draw_board()
+
+    if first_guess and second_guess:
+        check_guesses(first_guess_num, second_guess_num) #check number when guessing
+        pygame.time.delay(1000)
+        first_guess = False
+        second_guess = False
+
+
+    for event in pygame.event.get():
+        if event.type == QUIT:
+            running = False
+
+        if event.type == pygame.MOUSEBUTTONDOWN: #checking if anything has been clicked
+
+            for i in range(len(board)):
+                button = board[i]
+
+                if not game_over:
+
+                    if button.collidepoint(event.pos) and not first_guess:
+                        first_guess = True
+                        first_guess_num = i
+
+
+                    if button.collidepoint(event.pos) and not second_guess and first_guess and i != first_guess_num:
+                        second_guess = True
+                        second_guess_num = i
+
+
+            if restart.collidepoint(event.pos): #restarts the game
+                options_list = []
+                used = []
+                spaces = []
+                new_board = True
+                score = 0
+                matches = 0
+                first_guess = False
+                second_guess = False
+                correct = [[0, 0, 0, 0, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0, 0, 0, 0]]  # checking number
+
+                game_over = False
+
+
+    if matches == rows * coloumns // 2: #if you win
+        game_over = True
+        winner = pygame.draw.rect(window, gray, [10, height-300, width-20, 80], 0, 5)
+        winner_text = title_font.render(f'You won in {score} moves!', True, white)
+        window.blit(winner_text, (10, height-290))
+        if best_score > score or best_score == 0:
+            best_score = score
+
+    if first_guess:
+        piece_text = small_font.render(f'{spaces[first_guess_num]}', True, blue)
+        location = (first_guess_num // rows * 75 + 18, (first_guess_num - (first_guess_num // rows * rows)) * 65 + 120)
+        window.blit(piece_text, (location))
+
+
+    if second_guess:
+        piece_text = small_font.render(f'{spaces[second_guess_num]}', True, blue)
+        location = (second_guess_num // rows * 75 + 18, (second_guess_num - (second_guess_num // rows * rows)) * 65 + 120)
+        window.blit(piece_text, (location))
+
+
+    #displays window
+    pygame.display.flip()
+#ends application
+pygame.quit()
+
+
